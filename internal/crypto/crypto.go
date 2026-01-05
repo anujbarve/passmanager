@@ -14,10 +14,9 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// Argon2 parameters (OWASP recommended)
 const (
 	argonTime    = 3
-	argonMemory  = 64 * 1024 // 64MB
+	argonMemory  = 64 * 1024
 	argonThreads = 4
 	argonKeyLen  = 32
 	saltLen      = 16
@@ -27,7 +26,6 @@ type CryptoService struct {
 	masterKey []byte
 }
 
-// DeriveKey derives a key from the master password using Argon2id
 func DeriveKey(password string, salt []byte) []byte {
 	return argon2.IDKey(
 		[]byte(password),
@@ -39,7 +37,6 @@ func DeriveKey(password string, salt []byte) []byte {
 	)
 }
 
-// GenerateSalt creates a cryptographically secure random salt
 func GenerateSalt() ([]byte, error) {
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
@@ -48,13 +45,11 @@ func GenerateSalt() ([]byte, error) {
 	return salt, nil
 }
 
-// NewCryptoService creates a new crypto service with the derived key
 func NewCryptoService(masterPassword string, salt []byte) *CryptoService {
 	key := DeriveKey(masterPassword, salt)
 	return &CryptoService{masterKey: key}
 }
 
-// Encrypt encrypts plaintext using AES-256-GCM
 func (c *CryptoService) Encrypt(plaintext string) (string, error) {
 	block, err := aes.NewCipher(c.masterKey)
 	if err != nil {
@@ -75,7 +70,6 @@ func (c *CryptoService) Encrypt(plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-// Decrypt decrypts ciphertext using AES-256-GCM
 func (c *CryptoService) Decrypt(encryptedText string) (string, error) {
 	ciphertext, err := base64.StdEncoding.DecodeString(encryptedText)
 	if err != nil {
@@ -106,14 +100,12 @@ func (c *CryptoService) Decrypt(encryptedText string) (string, error) {
 	return string(plaintext), nil
 }
 
-// HashMasterPassword creates a hash for verification
 func HashMasterPassword(password string, salt []byte) string {
 	key := DeriveKey(password, salt)
 	hash := sha256.Sum256(key)
 	return base64.StdEncoding.EncodeToString(hash[:])
 }
 
-// GeneratePassword generates a cryptographically secure password
 func GeneratePassword(length int, includeSymbols bool) (string, error) {
 	const (
 		lowercase = "abcdefghijklmnopqrstuvwxyz"
@@ -141,7 +133,6 @@ func GeneratePassword(length int, includeSymbols bool) (string, error) {
 	return string(password), nil
 }
 
-// SecureClear zeros out sensitive data in memory
 func (c *CryptoService) SecureClear() {
 	for i := range c.masterKey {
 		c.masterKey[i] = 0

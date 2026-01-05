@@ -37,9 +37,8 @@ type ConfigListResponse struct {
 }
 
 func NewPocketBaseClient(baseURL string) *PocketBaseClient {
-	// Remove trailing slash if present
 	baseURL = strings.TrimSuffix(baseURL, "/")
-	
+
 	return &PocketBaseClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{
@@ -48,7 +47,19 @@ func NewPocketBaseClient(baseURL string) *PocketBaseClient {
 	}
 }
 
-// Authenticate tries multiple auth methods for different PocketBase versions
+func (p *PocketBaseClient) TestConnection() error {
+	resp, err := p.httpClient.Get(p.baseURL + "/api/health")
+	if err != nil {
+		return fmt.Errorf("cannot reach PocketBase: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("PocketBase health check failed: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func (p *PocketBaseClient) Authenticate(email, password string) error {
 	authData := map[string]string{
 		"identity": email,
@@ -60,11 +71,10 @@ func (p *PocketBaseClient) Authenticate(email, password string) error {
 		return err
 	}
 
-	// Try different endpoints based on PocketBase version
 	endpoints := []string{
-		"/api/collections/_superusers/auth-with-password",  // PocketBase v0.23+
-		"/api/collections/users/auth-with-password",        // Regular users collection
-		"/api/admins/auth-with-password",                   // PocketBase < v0.23
+		"/api/collections/_superusers/auth-with-password",
+		"/api/collections/users/auth-with-password",
+		"/api/admins/auth-with-password",
 	}
 
 	var lastErr error
@@ -78,9 +88,9 @@ func (p *PocketBaseClient) Authenticate(email, password string) error {
 			lastErr = err
 			continue
 		}
-		defer resp.Body.Close()
 
 		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 
 		if resp.StatusCode == http.StatusOK {
 			var authResp AuthResponse
@@ -89,28 +99,13 @@ func (p *PocketBaseClient) Authenticate(email, password string) error {
 				continue
 			}
 			p.authToken = authResp.Token
-			fmt.Printf("✅ Authenticated via %s\n", endpoint)
 			return nil
 		}
-		
+
 		lastErr = fmt.Errorf("endpoint %s failed: %s", endpoint, string(body))
 	}
 
-	return fmt.Errorf("all auth methods failed: %v", lastErr)
-}
-
-// TestConnection checks if PocketBase is reachable
-func (p *PocketBaseClient) TestConnection() error {
-	resp, err := p.httpClient.Get(p.baseURL + "/api/health")
-	if err != nil {
-		return fmt.Errorf("cannot reach PocketBase: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("PocketBase health check failed: status %d", resp.StatusCode)
-	}
-	return nil
+	return fmt.Errorf("authentication failed: %v", lastErr)
 }
 
 func (p *PocketBaseClient) doRequest(method, endpoint string, body interface{}) (*http.Response, error) {
@@ -136,7 +131,6 @@ func (p *PocketBaseClient) doRequest(method, endpoint string, body interface{}) 
 	return p.httpClient.Do(req)
 }
 
-// CreateCredential stores a new encrypted credential
 func (p *PocketBaseClient) CreateCredential(cred models.Credential) (*models.Credential, error) {
 	resp, err := p.doRequest("POST", "/api/collections/credentials/records", cred)
 	if err != nil {
@@ -158,7 +152,6 @@ func (p *PocketBaseClient) CreateCredential(cred models.Credential) (*models.Cre
 	return &created, nil
 }
 
-// GetCredential retrieves a credential by ID
 func (p *PocketBaseClient) GetCredential(id string) (*models.Credential, error) {
 	resp, err := p.doRequest("GET", fmt.Sprintf("/api/collections/credentials/records/%s", id), nil)
 	if err != nil {
@@ -178,12 +171,12 @@ func (p *PocketBaseClient) GetCredential(id string) (*models.Credential, error) 
 	return &cred, nil
 }
 
-// ListCredentials retrieves all credentials with optional search
 func (p *PocketBaseClient) ListCredentials(search string) ([]models.Credential, error) {
-	endpoint := "/api/collections/credentials/records?perPage=500"
+	endpoint := "/api/collections/credentials/records?perPage=500&sort=-created"
 	if search != "" {
 		endpoint += "&filter=" + url.QueryEscape(fmt.Sprintf(
-			"title~'%s' || username~'%s' || url~'%s'", search, search, search))
+			"title~'%s' || username~'%s' || url~'%s' || category~'%s'",
+			search, search, search, search))
 	}
 
 	resp, err := p.doRequest("GET", endpoint, nil)
@@ -200,7 +193,27 @@ func (p *PocketBaseClient) ListCredentials(search string) ([]models.Credential, 
 	return listResp.Items, nil
 }
 
-// DeleteCredential removes a credential
+func (p *PocketBaseClient) UpdateCredential(id string, cred models.Credential) (*models.Credential, error) {
+	resp, err := p.doRequest("PATCH", fmt.Sprintf("/api/collections/credentials/records/%s", id), cred)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to update credential: %s", string(body))
+	}
+
+	var updated models.Credential
+	if err := json.Unmarshal(body, &updated); err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
+}
+
 func (p *PocketBaseClient) DeleteCredential(id string) error {
 	resp, err := p.doRequest("DELETE", fmt.Sprintf("/api/collections/credentials/records/%s", id), nil)
 	if err != nil {
@@ -215,7 +228,6 @@ func (p *PocketBaseClient) DeleteCredential(id string) error {
 	return nil
 }
 
-// SaveVaultConfig saves the vault configuration
 func (p *PocketBaseClient) SaveVaultConfig(config models.VaultConfig) error {
 	resp, err := p.doRequest("POST", "/api/collections/vault_config/records", config)
 	if err != nil {
@@ -232,7 +244,6 @@ func (p *PocketBaseClient) SaveVaultConfig(config models.VaultConfig) error {
 	return nil
 }
 
-// GetVaultConfig retrieves the vault configuration
 func (p *PocketBaseClient) GetVaultConfig() (*models.VaultConfig, error) {
 	resp, err := p.doRequest("GET", "/api/collections/vault_config/records?perPage=1", nil)
 	if err != nil {
@@ -250,4 +261,34 @@ func (p *PocketBaseClient) GetVaultConfig() (*models.VaultConfig, error) {
 	}
 
 	return &listResp.Items[0], nil
+}
+
+func (p *PocketBaseClient) UpdateVaultConfig(id string, config models.VaultConfig) error {
+	resp, err := p.doRequest("PATCH", fmt.Sprintf("/api/collections/vault_config/records/%s", id), config)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update config: %s", string(body))
+	}
+
+	return nil
+}
+
+func (p *PocketBaseClient) GetCredentialCount() (int, error) {
+	resp, err := p.doRequest("GET", "/api/collections/credentials/records?perPage=1", nil)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var listResp ListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return 0, err
+	}
+
+	return listResp.TotalItems, nil
 }
