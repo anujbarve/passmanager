@@ -120,7 +120,7 @@ go version
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/passmanager.git
+git clone https://github.com/anujbarve/passmanager.git
 cd passmanager
 
 # Download dependencies
@@ -136,22 +136,22 @@ sudo mv passmanager /usr/local/bin/
 ### Option 2: Go Install
 
 ```bash
-go install github.com/yourusername/passmanager@latest
+go install github.com/anujbarve/passmanager@latest
 ```
 
 ### Option 3: Download Pre-built Binary
 
 ```bash
 # Linux (amd64)
-curl -L https://github.com/yourusername/passmanager/releases/latest/download/passmanager-linux-amd64 -o passmanager
+curl -L https://github.com/anujbarve/passmanager/releases/latest/download/passmanager-linux-amd64 -o passmanager
 chmod +x passmanager
 
 # macOS (amd64)
-curl -L https://github.com/yourusername/passmanager/releases/latest/download/passmanager-darwin-amd64 -o passmanager
+curl -L https://github.com/anujbarve/passmanager/releases/latest/download/passmanager-darwin-amd64 -o passmanager
 chmod +x passmanager
 
 # Windows (amd64)
-curl -L https://github.com/yourusername/passmanager/releases/latest/download/passmanager-windows-amd64.exe -o passmanager.exe
+curl -L https://github.com/anujbarve/passmanager/releases/latest/download/passmanager-windows-amd64.exe -o passmanager.exe
 ```
 
 ### Verify Installation
@@ -703,7 +703,7 @@ Contributions are welcome! Please follow these steps:
 ### 1. Fork the Repository
 
 ```bash
-git clone https://github.com/yourusername/passmanager.git
+git clone https://github.com/anujbarve/passmanager.git
 cd passmanager
 ```
 
@@ -800,8 +800,8 @@ SOFTWARE.
 ## 📞 Support
 
 - 📧 Email: anujbarve27[at]gmail[dot]com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/passmanager/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/passmanager/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/anujbarve/passmanager/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/anujbarve/passmanager/discussions)
 
 ---
 
