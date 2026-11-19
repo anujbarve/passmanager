@@ -119,9 +119,10 @@ func runInit(cmd *cobra.Command, args []string) {
 
 	// Save local config
 	cfg := &config.Config{
-		PocketBaseURL:  pbURL,
-		AdminEmail:     adminEmail,
-		SessionTimeout: 5,
+		PocketBaseURL: pbURL,
+		AdminEmail:    adminEmail,
+		Settings:      models.DefaultSettings(),
+		Initialized:   true,
 	}
 
 	if err := cfg.Save(); err != nil {
